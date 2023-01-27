@@ -1,3 +1,5 @@
+#ifndef TESTLIB_H
+#define TESTLIB_H
 #include<functional>
 
 class stamp{
@@ -18,3 +20,4 @@ class stamp{
         static void parallel_for(int high1, int high2, std::function<void(int, int)> &&lambda, int numThreads);
 
 };
+#endif
