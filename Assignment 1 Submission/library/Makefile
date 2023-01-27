@@ -6,7 +6,7 @@ libstamp.so: stamp.o
 	$(CC) $(CFLAGS) -shared -o libstamp.so stamp.o
 
 stamp.o: stamp.cpp
-	$(CC) $(CFLAGS) -fPIC -c stamp.cpp
+	$(CC) $(CFLAGS) -fPIC -c stamp.cpp -lpthread
 
 clean:
 	rm stamp.o libstamp.so
