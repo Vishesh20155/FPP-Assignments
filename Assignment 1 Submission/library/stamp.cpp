@@ -2,6 +2,7 @@
 #include <pthread.h>
 #include <iostream>
 #include <iomanip>
+#include <time.h>
 
 using namespace std;
 
@@ -66,12 +67,21 @@ void *interface_4_threadFunc(void *args) {
 
 // Function Definfition for Interface of type 1
 void stamp::execute_tuple(std::function<void()> &&lambda1, std::function<void()> &&lambda2) {
+    clock_t start, end;
+    start = clock();
     pthread_t thread_id;
     interface_1_struct args;
     args.call_from_thread=lambda1;
     pthread_create(&thread_id, NULL, interface_1_threadFunc, (void*) &args);
     lambda2();
     pthread_join(thread_id, NULL);
+
+    end=clock();
+
+    double time_taken = double(end - start) / double(CLOCKS_PER_SEC);
+    cout<<"StaMp Statistics: Threads = "<<1<<", ";
+    cout<<"Parallel execution time = "<<fixed<< time_taken << setprecision(5);
+    cout << " seconds" << endl;
 }
 
 
