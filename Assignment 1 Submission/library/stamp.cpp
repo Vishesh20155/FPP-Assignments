@@ -1,5 +1,9 @@
 #include "stamp.h"
 #include <pthread.h>
+#include <iostream>
+#include <iomanip>
+
+using namespace std;
 
 // Struct for linguistic interface 1(used for fibonacci computation)
 // contains the function to be called
@@ -74,6 +78,10 @@ void stamp::execute_tuple(std::function<void()> &&lambda1, std::function<void()>
 // Function Definfition for Interface of type 2
 void stamp::parallel_for(int low, int high, int stride, std::function<void(int)> &&lambda, int numThreads) {
     // Incase the size of vector is smaller than numThreads, we should not create extra threads.
+    
+    clock_t start, end;
+    start = clock();
+
     int threadsCreated=std::min(numThreads, high);
     
     pthread_t thread_ids[threadsCreated];
@@ -111,10 +119,27 @@ void stamp::parallel_for(int low, int high, int stride, std::function<void(int)>
     for(int i=0; i<threadsCreated; ++i){
         pthread_join(thread_ids[i], NULL);
     }
+
+    end=clock();
+
+    double time_taken = double(end - start) / double(CLOCKS_PER_SEC);
+    cout<<"StaMp Statistics: Threads = "<<threadsCreated<<", ";
+    cout<<"Parallel execution time = "<<fixed<< time_taken << setprecision(5);
+    cout << " seconds" << endl;
 }
+
+// Function definition for Interface of type 3
+// void stamp::parallel_for(int high, std::function<void(int)> &&lambda, int numThreads) {
+//     // Calling the predefined function having similar
+//     stamp::parallel_for(0, high, 1, &(*lambda), numThreads);
+// }
 
 // Function Definfition for Interface of type 4
 void stamp::parallel_for(int low1, int high1, int stride1, int low2, int high2, int stride2, std::function<void(int, int)> &&lambda, int numThreads){
+    
+    clock_t start, end;
+    start=clock();
+    
     pthread_t thread_ids[numThreads];
     interface_4_struct args[numThreads];
 
@@ -151,9 +176,14 @@ void stamp::parallel_for(int low1, int high1, int stride1, int low2, int high2, 
     }
 
 
-    
-
     for(int i=0; i<numThreads; ++i){
         pthread_join(thread_ids[i], NULL);
     }
+
+    end=clock();
+
+    double time_taken = double(end - start) / double(CLOCKS_PER_SEC);
+    cout<<"StaMp Statistics: Threads = "<<numThreads<<", ";
+    cout<<"Parallel execution time = "<<fixed<< time_taken << setprecision(5);
+    cout << " seconds" << endl;
 }
