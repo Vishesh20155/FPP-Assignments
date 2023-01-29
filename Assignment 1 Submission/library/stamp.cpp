@@ -55,11 +55,24 @@ void *interface_2_threadFunc(void *args) {
 // Function called for execution of linguistic interface of fourth type
 // (parallelized Matrix Multiplication)
 void *interface_4_threadFunc(void *args) {
+    // This function is actually no used, but is for a simpler version of the program which is commented below
     interface_4_struct *param = (interface_4_struct*) args;
     for(int i=param->low1; i<param->high1; i+=param->stride1){
         for(int j=param->low2; j<param->high2; j+=param->stride2){
             param->call_from_thread(i, j);
         }
+    }
+
+    return NULL;
+}
+
+void *interface_4_threadFunc_modified(void *args){
+    interface_4_struct *param = (interface_4_struct*) args;
+    
+    for(int i=param->low1; i<param->high1; ++i){
+        int row=i/param->high2, col=i%param->high2;
+
+        param->call_from_thread(row, col);
     }
 
     return NULL;
@@ -153,10 +166,39 @@ void stamp::parallel_for(int low1, int high1, int stride1, int low2, int high2, 
     pthread_t thread_ids[numThreads];
     interface_4_struct args[numThreads];
 
+    // Total no of tasks which is the smallest unit of execution for a thread is size*size
+    // This is the number of times the lambda function will be called
+    int no_of_tasks=high1*high1;
+
+    int tasks_per_thread=no_of_tasks/numThreads, extra=no_of_tasks%numThreads;
+
+    int idx=0, currHigh=tasks_per_thread, currLow=0;
+    while (idx<min(numThreads, no_of_tasks))
+    {
+        args[idx].call_from_thread=lambda;
+        args[idx].low1=currLow;
+        if(extra>0){
+            currHigh++;
+            extra--;
+        }
+        args[idx].high1=currHigh;
+
+        args[idx].high2=high2;
+        
+        currLow=currHigh;
+        currHigh+=tasks_per_thread;
+
+        pthread_create(&thread_ids[idx], NULL, interface_4_threadFunc_modified, (void*)&(args[idx]));
+        idx++;
+    }
+
+/* 
+Below code is commented as it is not the most efficient approach, other approach is implemented above
+The logic behind this commented code is explained in further comments and is similar to vector addition function.
+
     // The code written below parallelizes matrix multiplication according to matrix A
     // The matrix A is broken into some rows and then each row group is multiplied with B in the thread function
 
-        
     // Variable 'extra' accommodates for the fact when size is not a factor of numThreads
     int extra=high1%numThreads, step=high1/numThreads, currHigh=step;
 
@@ -185,8 +227,9 @@ void stamp::parallel_for(int low1, int high1, int stride1, int low2, int high2, 
         pthread_create(&thread_ids[i], NULL, interface_4_threadFunc, (void*)&(args[i]));
     }
 
+*/
 
-    for(int i=0; i<numThreads; ++i){
+    for(int i=0; i<min(numThreads, no_of_tasks); ++i){
         pthread_join(thread_ids[i], NULL);
     }
 
