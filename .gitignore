@@ -1,0 +1,6 @@
+*.o
+fib
+vector
+matrix
+*.so
+

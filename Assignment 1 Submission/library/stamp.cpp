@@ -47,7 +47,20 @@ void *interface_2_threadFunc(void *args) {
     return NULL;
 }
 
+// Function called for execution of linguistic interface of fourth type
+// (parallelized Matrix Multiplication)
+void *interface_4_threadFunc(void *args) {
+    interface_4_struct *param = (interface_4_struct*) args;
+    for(int i=param->low1; i<param->high1; i+=param->stride1){
+        for(int j=param->low2; j<param->high2; j+=param->stride2){
+            param->call_from_thread(i, j);
+        }
+    }
 
+    return NULL;
+}
+
+// Function Definfition for Interface of type 1
 void stamp::execute_tuple(std::function<void()> &&lambda1, std::function<void()> &&lambda2) {
     pthread_t thread_id;
     interface_1_struct args;
@@ -57,15 +70,20 @@ void stamp::execute_tuple(std::function<void()> &&lambda1, std::function<void()>
     pthread_join(thread_id, NULL);
 }
 
+
+// Function Definfition for Interface of type 2
 void stamp::parallel_for(int low, int high, int stride, std::function<void(int)> &&lambda, int numThreads) {
-    pthread_t thread_ids[numThreads];
-    interface_2_struct args[numThreads];
+    // Incase the size of vector is smaller than numThreads, we should not create extra threads.
+    int threadsCreated=std::min(numThreads, high);
+    
+    pthread_t thread_ids[threadsCreated];
+    interface_2_struct args[threadsCreated];
 
     // Variable 'extra' accommodates for the fact when size is not a factor of numThreads
-    int extra=high%numThreads, step=high/numThreads, currHigh=step;
+    int extra=high%threadsCreated, step=high/threadsCreated, currHigh=step;
 
     // The loop divides the addition of vectors into addition of size/numThreads sized vectors
-    for(int i=0; i<numThreads; ++i){
+    for(int i=0; i<threadsCreated; ++i){
         args[i].call_from_thread=lambda;
         if(i==0){
             args[i].low=0;
@@ -89,6 +107,51 @@ void stamp::parallel_for(int low, int high, int stride, std::function<void(int)>
     // for(int i=0; i<numThreads; ++i){
     //     pthread_create(&thread_ids[i], NULL, interface_2_threadFunc, (void*)&(args[i]));
     // }
+
+    for(int i=0; i<threadsCreated; ++i){
+        pthread_join(thread_ids[i], NULL);
+    }
+}
+
+// Function Definfition for Interface of type 4
+void stamp::parallel_for(int low1, int high1, int stride1, int low2, int high2, int stride2, std::function<void(int, int)> &&lambda, int numThreads){
+    pthread_t thread_ids[numThreads];
+    interface_4_struct args[numThreads];
+
+    // The code written below parallelizes matrix multiplication according to matrix A
+    // The matrix A is broken into some rows and then each row group is multiplied with B in the thread function
+
+        
+    // Variable 'extra' accommodates for the fact when size is not a factor of numThreads
+    int extra=high1%numThreads, step=high1/numThreads, currHigh=step;
+
+    // The loop divides the addition of vectors into addition of size/numThreads sized vectors
+    for(int i=0; i<numThreads; ++i){
+        args[i].call_from_thread=lambda;
+        args[i].low2=0;
+        args[i].high2=high2;
+        if(i==0){
+            args[i].low1=0;
+        }
+        else{
+            args[i].low1=args[i-1].high1;
+        }
+        args[i].high1=currHigh;
+        currHigh+=step;
+        if(extra){
+            extra--;
+            args[i].high1++;
+            currHigh++;
+        }
+        args[i].stride1=stride1;
+        args[i].stride2=stride2;
+
+        // Creation of thread
+        pthread_create(&thread_ids[i], NULL, interface_4_threadFunc, (void*)&(args[i]));
+    }
+
+
+    
 
     for(int i=0; i<numThreads; ++i){
         pthread_join(thread_ids[i], NULL);
