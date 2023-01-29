@@ -66,6 +66,7 @@ void *interface_4_threadFunc(void *args) {
     return NULL;
 }
 
+// This is a function to implement Matrix Multiplication most efficiently in the given scenario
 void *interface_4_threadFunc_modified(void *args){
     interface_4_struct *param = (interface_4_struct*) args;
     
