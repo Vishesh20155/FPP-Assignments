@@ -153,7 +153,7 @@ void stamp::parallel_for(int low, int high, int stride, std::function<void(int)>
 
 // Function definition for Interface of type 3
 void stamp::parallel_for(int high, std::function<void(int)> &&lambda, int numThreads) {
-    // Calling the predefined function having similar
+    // Calling the predefined function having similar arguments with low defeaulted to 0 and stride defaulted to 1
     stamp::parallel_for(0, high, 1, (std::function<void(int)>) lambda, numThreads);
 }
 
@@ -243,6 +243,6 @@ The logic behind this commented code is explained in further comments and is sim
 
 // Function definition for Interface of type 5
 void stamp::parallel_for(int high1, int high2, std::function<void(int, int)> &&lambda, int numThreads) {
-    // Calling the predefined function having similar
+    // Calling the predefined function having similar arguments with low1, low2 defaulted to 0 and stride 1, stride 2 defaulted to 1
     stamp::parallel_for(0, high1, 1, 0, high2, 1, (std::function<void(int, int)>) lambda, numThreads);
 }
