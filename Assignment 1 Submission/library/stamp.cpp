@@ -152,10 +152,10 @@ void stamp::parallel_for(int low, int high, int stride, std::function<void(int)>
 }
 
 // Function definition for Interface of type 3
-// void stamp::parallel_for(int high, std::function<void(int)> &&lambda, int numThreads) {
-//     // Calling the predefined function having similar
-//     stamp::parallel_for(0, high, 1, &(*lambda), numThreads);
-// }
+void stamp::parallel_for(int high, std::function<void(int)> &&lambda, int numThreads) {
+    // Calling the predefined function having similar
+    stamp::parallel_for(0, high, 1, (std::function<void(int)>) lambda, numThreads);
+}
 
 // Function Definfition for Interface of type 4
 void stamp::parallel_for(int low1, int high1, int stride1, int low2, int high2, int stride2, std::function<void(int, int)> &&lambda, int numThreads){
@@ -239,4 +239,10 @@ The logic behind this commented code is explained in further comments and is sim
     cout<<"StaMp Statistics: Threads = "<<numThreads<<", ";
     cout<<"Parallel execution time = "<<fixed<< time_taken << setprecision(5);
     cout << " seconds" << endl;
+}
+
+// Function definition for Interface of type 5
+void stamp::parallel_for(int high1, int high2, std::function<void(int, int)> &&lambda, int numThreads) {
+    // Calling the predefined function having similar
+    stamp::parallel_for(0, high1, 1, 0, high2, 1, (std::function<void(int, int)>) lambda, numThreads);
 }
