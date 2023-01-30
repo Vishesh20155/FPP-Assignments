@@ -2,7 +2,8 @@
 #include <pthread.h>
 #include <iostream>
 #include <iomanip>
-#include <time.h>
+#include <chrono>
+#include <ctime>
 
 using namespace std;
 
@@ -81,8 +82,11 @@ void *interface_4_threadFunc_modified(void *args){
 
 // Function Definfition for Interface of type 1
 void stamp::execute_tuple(std::function<void()> &&lambda1, std::function<void()> &&lambda2) {
-    clock_t start, end;
-    start = clock();
+    
+    std::chrono::time_point<std::chrono::system_clock> start, end;
+
+    start = std::chrono::system_clock::now();
+
     pthread_t thread_id;
     interface_1_struct args;
     args.call_from_thread=lambda1;
@@ -100,12 +104,12 @@ void stamp::execute_tuple(std::function<void()> &&lambda1, std::function<void()>
         EXIT_FAILURE;
     }
 
-    end=clock();
-
-    double time_taken = double(end - start) / double(CLOCKS_PER_SEC);
-    cout<<"StaMp Statistics: Threads = "<<1<<", ";
-    cout<<"Parallel execution time = "<<fixed<< time_taken << setprecision(5);
-    cout << " seconds" << endl;
+    end = std::chrono::system_clock::now();
+ 
+    chrono::duration<double> elapsed_seconds = end - start;
+    time_t end_time = std::chrono::system_clock::to_time_t(end);
+    cout<<"StaMp Statistics: Threads = "<<2<<", ";
+    cout<<"Parallel execution time = "<< elapsed_seconds.count()<< " seconds"<<endl;
 }
 
 
@@ -113,8 +117,9 @@ void stamp::execute_tuple(std::function<void()> &&lambda1, std::function<void()>
 void stamp::parallel_for(int low, int high, int stride, std::function<void(int)> &&lambda, int numThreads) {
     // Incase the size of vector is smaller than numThreads, we should not create extra threads.
     
-    clock_t start, end;
-    start = clock();
+    std::chrono::time_point<std::chrono::system_clock> start, end;
+ 
+    start = std::chrono::system_clock::now();
 
     int threadsCreated=std::min(numThreads, high);
     
@@ -162,12 +167,12 @@ void stamp::parallel_for(int low, int high, int stride, std::function<void(int)>
         }
     }
 
-    end=clock();
-
-    double time_taken = double(end - start) / double(CLOCKS_PER_SEC);
+    end = std::chrono::system_clock::now();
+ 
+    chrono::duration<double> elapsed_seconds = end - start;
+    time_t end_time = std::chrono::system_clock::to_time_t(end);
     cout<<"StaMp Statistics: Threads = "<<threadsCreated<<", ";
-    cout<<"Parallel execution time = "<<fixed<< time_taken << setprecision(5);
-    cout << " seconds" << endl;
+    cout<<"Parallel execution time = "<< elapsed_seconds.count()<< " seconds"<<endl;
 }
 
 // Function definition for Interface of type 3
@@ -179,8 +184,9 @@ void stamp::parallel_for(int high, std::function<void(int)> &&lambda, int numThr
 // Function Definfition for Interface of type 4
 void stamp::parallel_for(int low1, int high1, int stride1, int low2, int high2, int stride2, std::function<void(int, int)> &&lambda, int numThreads){
     
-    clock_t start, end;
-    start=clock();
+    std::chrono::time_point<std::chrono::system_clock> start, end;
+ 
+    start = std::chrono::system_clock::now();
     
     pthread_t thread_ids[numThreads];
     interface_4_struct args[numThreads];
@@ -263,12 +269,12 @@ The logic behind this commented code is explained in further comments and is sim
         }
     }
 
-    end=clock();
-
-    double time_taken = double(end - start) / double(CLOCKS_PER_SEC);
+    end = std::chrono::system_clock::now();
+ 
+    chrono::duration<double> elapsed_seconds = end - start;
+    time_t end_time = std::chrono::system_clock::to_time_t(end);
     cout<<"StaMp Statistics: Threads = "<<numThreads<<", ";
-    cout<<"Parallel execution time = "<<fixed<< time_taken << setprecision(5);
-    cout << " seconds" << endl;
+    cout<<"Parallel execution time = "<< elapsed_seconds.count()<< " seconds"<<endl;
 }
 
 // Function definition for Interface of type 5

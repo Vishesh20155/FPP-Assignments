@@ -27,3 +27,6 @@ https://www.geeksforgeeks.org/measure-execution-time-with-high-precision-in-c-c/
 https://man7.org/linux/man-pages/man7/pthreads.7.html
 
 Lecture Slides
+
+https://www.geeksforgeeks.org/chrono-in-c/
+
