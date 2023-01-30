@@ -21,5 +21,9 @@
 References:
 
 https://ayandas.me/blog-tut/2019/01/05/linking-in-c++.html
+
 https://www.geeksforgeeks.org/measure-execution-time-with-high-precision-in-c-c/
 
+https://man7.org/linux/man-pages/man7/pthreads.7.html
+
+Lecture Slides
