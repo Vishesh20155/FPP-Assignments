@@ -86,9 +86,19 @@ void stamp::execute_tuple(std::function<void()> &&lambda1, std::function<void()>
     pthread_t thread_id;
     interface_1_struct args;
     args.call_from_thread=lambda1;
-    pthread_create(&thread_id, NULL, interface_1_threadFunc, (void*) &args);
+    int errVal=pthread_create(&thread_id, NULL, interface_1_threadFunc, (void*) &args);
+    if(errVal<0){
+        perror("Error in pthread_create\n");
+        EXIT_FAILURE;
+    }
+
     lambda2();
-    pthread_join(thread_id, NULL);
+
+    errVal=pthread_join(thread_id, NULL);
+    if(errVal<0){
+        perror("Error in pthread_join\n");
+        EXIT_FAILURE;
+    }
 
     end=clock();
 
@@ -133,7 +143,11 @@ void stamp::parallel_for(int low, int high, int stride, std::function<void(int)>
         args[i].stride=stride;
 
         // Creation of thread
-        pthread_create(&thread_ids[i], NULL, interface_2_threadFunc, (void*)&(args[i]));
+        int errVal=pthread_create(&thread_ids[i], NULL, interface_2_threadFunc, (void*)&(args[i]));
+        if(errVal<0){
+        perror("Error in pthread_create\n");
+        EXIT_FAILURE;
+    }
     }
 
     // for(int i=0; i<numThreads; ++i){
@@ -141,7 +155,11 @@ void stamp::parallel_for(int low, int high, int stride, std::function<void(int)>
     // }
 
     for(int i=0; i<threadsCreated; ++i){
-        pthread_join(thread_ids[i], NULL);
+        int errVal=pthread_join(thread_ids[i], NULL);
+        if(errVal<0){
+            perror("Error in pthread_join\n");
+            EXIT_FAILURE;
+        }
     }
 
     end=clock();
@@ -189,13 +207,20 @@ void stamp::parallel_for(int low1, int high1, int stride1, int low2, int high2, 
         currLow=currHigh;
         currHigh+=tasks_per_thread;
 
-        pthread_create(&thread_ids[idx], NULL, interface_4_threadFunc_modified, (void*)&(args[idx]));
+        int errVal=pthread_create(&thread_ids[idx], NULL, interface_4_threadFunc_modified, (void*)&(args[idx]));
+        if(errVal<0){
+            perror("Error in pthread_create\n");
+            EXIT_FAILURE;
+        }
+
         idx++;
     }
 
 /* 
 Below code is commented as it is not the most efficient approach, other approach is implemented above
 The logic behind this commented code is explained in further comments and is similar to vector addition function.
+
+    // The comments from this code can be removed and can be run
 
     // The code written below parallelizes matrix multiplication according to matrix A
     // The matrix A is broken into some rows and then each row group is multiplied with B in the thread function
@@ -231,7 +256,11 @@ The logic behind this commented code is explained in further comments and is sim
 */
 
     for(int i=0; i<min(numThreads, no_of_tasks); ++i){
-        pthread_join(thread_ids[i], NULL);
+        int errVal=pthread_join(thread_ids[i], NULL);
+        if(errVal<0){
+            perror("Error in pthread_create\n");
+            EXIT_FAILURE;
+        }
     }
 
     end=clock();
