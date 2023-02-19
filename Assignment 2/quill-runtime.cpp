@@ -8,7 +8,7 @@
 #include <time.h>
 #include <iostream>
 
-int num_workers=2;
+int num_workers=1;
 
 typedef struct {
     std::function<void()> *call_from_thread;
@@ -21,7 +21,8 @@ class tasks_deque
 private:
     int id, deque_size, deque_head, deque_tail;
     pthread_mutex_t deque_lock;
-    void* deque_array[200];
+    // void* deque_array[200];
+    std::function<void()> deque_array[200];
 
 public:
     tasks_deque(int id_){
@@ -35,7 +36,8 @@ public:
         pthread_mutex_init(&deque_lock, NULL);
     }
 
-    void push_task(void* task){
+    // void push_task(void* task){
+    void push_task(std::function<void()> task) {
         if( ((deque_tail+1)%deque_size) == deque_head ) {   // Deque full
             // Throw an error here
             perror("Deque Full");
@@ -53,8 +55,10 @@ public:
         return deque_tail==deque_size;
     }
 
-    void* pop_task() {
-        void* task=NULL;
+    // void* pop_task() {
+    std::function<void()> pop_task() {
+        // void* task=NULL;
+        std::function<void()> task=NULL;
         pthread_mutex_lock(&deque_lock);
         if(!isEmpty()){
             task=deque_array[deque_head];
@@ -72,8 +76,10 @@ public:
         return task;
     } 
 
-    void* steal_task() {
-        void* task=NULL;
+    // void* steal_task() {
+    std::function<void()> steal_task() {
+        // void* task=NULL;
+        std::function<void()> task=NULL;
         pthread_mutex_lock(&deque_lock);
         if(!isEmpty()){
             task=deque_array[deque_tail];
@@ -108,8 +114,10 @@ pthread_t thread_ids[MAX_THREADS];
 
 tasks_deque *deque_ptrs;
 
-void* pop_task_from_runtime(){
-    void* task = NULL;
+// void* pop_task_from_runtime(){
+std::function<void()> pop_task_from_runtime() {
+    // void* task = NULL;
+    std::function<void()> task = NULL;
 
     // Get the ID of the thread on which the task is running
     int *thread_id_ptr = (int*)pthread_getspecific(id_key); // get the thread's ID
@@ -142,24 +150,28 @@ void* pop_task_from_runtime(){
 
 void find_and_execute_task() {
 
-    void* task = pop_task_from_runtime();
+    // void* task = pop_task_from_runtime();
+    std::function<void()> task = pop_task_from_runtime();
 
     if(task!=NULL){
-        printf("Here 5\n");
+        // printf("Here 5\n");
         int t = *((int*)pthread_getspecific(id_key));
-        printf("Doing task by thread %d\n", t);
+        // printf("Doing task by thread %d\n", t);
         
         // for_function* func_arg_ptr = (for_function*)task;
         // (*(func_arg_ptr->call_from_thread))();
         
-        try{
-           (*((for_function*)task)->call_from_thread)();
-        }
-        catch (std::bad_function_call& e)
-        {
-            std::cout << "ERROR: Bad function call\n";
-        }
-        printf("Here 6\n");
+        // try{
+        //    (*((for_function*)task)->call_from_thread)();
+        // }
+        // catch (std::bad_function_call& e)
+        // {
+        //     std::cout << "ERROR: Bad function call\n";
+        // }
+
+        task();
+
+        // printf("Here 6\n");
 
         pthread_mutex_lock(&finish_lock);
         finish_counter--;
@@ -258,9 +270,11 @@ void quill::async(std::function<void()> &&lambda) {
         exit(1);
     }
     // Push the task on array
-    for_function func_arg;
-    func_arg.call_from_thread = new std::function<void()>(lambda);
-    deque_ptrs[thread_id].push_task((void*) &func_arg);
+    // for_function func_arg;
+    // func_arg.call_from_thread = new std::function<void()>(lambda);
+    // deque_ptrs[thread_id].push_task((void*) &func_arg);
+
+    deque_ptrs[thread_id].push_task(*(new std::function<void()> (lambda)));
     
     // tasks_deque[deque_head]=lambda;
 
