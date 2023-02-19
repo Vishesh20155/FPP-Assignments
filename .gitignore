@@ -3,4 +3,5 @@ fib
 vector
 matrix
 *.so
-
+test.c
+*.out
