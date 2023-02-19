@@ -275,6 +275,8 @@ void quill::async(std::function<void()> &&lambda) {
     // deque_ptrs[thread_id].push_task((void*) &func_arg);
 
     deque_ptrs[thread_id].push_task(*(new std::function<void()> (lambda)));
+
+    // Correct the above function, don't directly call push_task
     
     // tasks_deque[deque_head]=lambda;
 
