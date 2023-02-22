@@ -7,8 +7,11 @@
 #include <cstring>
 #include <time.h>
 #include <iostream>
+#include <stdlib.h>
+#include <stdio.h>
+#include <algorithm>
 
-int num_workers=2;
+int num_workers=atoi(getenv("QUILL_WORKERS"));
 
 typedef struct {
     std::function<void()> *call_from_thread;
@@ -200,8 +203,8 @@ void *worker_routine(void *arg){
     }
 
     int *thread_id = (int*)pthread_getspecific(id_key); // get the thread's ID
-    if(thread_id!=NULL){    printf("Last line of Thread %d is running\n", *thread_id);  }
-    else{   printf("Thread id NULL\n"); }
+    // if(thread_id!=NULL){    printf("Last line of Thread %d is running\n", *thread_id);  }
+    // else{   printf("Thread id NULL\n"); }
 
     return NULL;
 }
