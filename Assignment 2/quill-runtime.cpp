@@ -8,7 +8,7 @@
 #include <time.h>
 #include <iostream>
 
-int num_workers=1;
+int num_workers=2;
 
 typedef struct {
     std::function<void()> *call_from_thread;
@@ -192,7 +192,7 @@ void find_and_execute_task() {
 }
 
 void *worker_routine(void *arg){
-    printf("Here 3\n");
+    // printf("Here 3\n");
     pthread_setspecific(id_key, arg);
     // sleep(2);
     while(!shutdown) {
