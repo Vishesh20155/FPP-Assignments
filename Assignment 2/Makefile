@@ -7,7 +7,7 @@ libquill-runtime.so: quill-runtime.o
 	g++ -std=c++11 -shared -o libquill-runtime.so quill-runtime.o
 
 nqueens: nqueens.cpp
-	g++ -std=c++11 nqueens.cpp -o nqueens -L../Assignment\ 2 -lquill-runtime -lpthread
+	g++ -std=c++11 nqueens.cpp -o nqueens -L. -lquill-runtime -lpthread
 
 clean:
 	rm nqueens libquill-runtime.so quill-runtime.o

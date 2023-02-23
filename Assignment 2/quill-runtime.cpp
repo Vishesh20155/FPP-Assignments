@@ -11,7 +11,7 @@
 #include <stdio.h>
 #include <algorithm>
 
-int num_workers=atoi(getenv("QUILL_WORKERS"));
+int num_workers=1;
 
 typedef struct {
     std::function<void()> *call_from_thread;
@@ -212,6 +212,11 @@ void *worker_routine(void *arg){
 void quill::init_runtime() {
     // printf("Here 1\n");
     // int size = thread_pool_size();
+    if (getenv("QUILL_WORKERS") != NULL) num_workers=atoi(getenv("QUILL_WORKERS"));
+    else{
+        printf("Defaulting to 1 thread in thread pool\n");
+    }
+
     // size is the number of worker threads in the thread pool
     int size=num_workers;
     for(int i=0; i<size; ++i) nums[i]=i;    // This loop will run from 0 to size as I want to initialize the array

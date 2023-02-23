@@ -5,3 +5,4 @@ matrix
 *.so
 test.c
 *.out
+notes.txt
