@@ -6,3 +6,4 @@ matrix
 test.c
 *.out
 notes.txt
+nqueens
