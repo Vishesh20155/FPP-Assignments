@@ -46,12 +46,18 @@ public:
             perror("Deque Full");
             exit(1);
         }
+
+        bool locking=false;
         if(deque_head == deque_size) {     // If the Deque is empty
+            locking=true;
+            pthread_mutex_lock(&deque_lock);
             deque_tail=deque_size-1;
         }
 
         deque_head = (deque_head-1+deque_size)%deque_size;
         deque_array[deque_head]=task;
+
+        if(locking) pthread_mutex_unlock(&deque_lock);
     }
 
     bool isEmpty(){
