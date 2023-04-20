@@ -49,6 +49,7 @@ int main(int argc, char *argv[])
     memset(A, 0, sizeof(double) * (N + 2));
     A[N+1] = N+1;
     memset(A_shadow, 0, sizeof(double) * (N + 2));
+    A_shadow[N+1] = N+1;
 
     int rank, np;
     MPI_Init(&argc, &argv);
@@ -70,14 +71,14 @@ int main(int argc, char *argv[])
             double x = A[START];
             MPI_Status stats;
             MPI_Send(&x, 1, MPI_DOUBLE, rank-1, i, MPI_COMM_WORLD);
-            MPI_Recv(&en, 1, MPI_DOUBLE, rank-1, i, MPI_COMM_WORLD, &stats);
+            MPI_Recv(&st, 1, MPI_DOUBLE, rank-1, i, MPI_COMM_WORLD, &stats);
         }
 
         if(rank < np-1) {
             double x = A[END];
             MPI_Status stats;
             MPI_Send(&x, 1, MPI_DOUBLE, rank+1, i, MPI_COMM_WORLD);
-            MPI_Recv(&st, 1, MPI_DOUBLE, rank+1, i, MPI_COMM_WORLD, &stats);
+            MPI_Recv(&en, 1, MPI_DOUBLE, rank+1, i, MPI_COMM_WORLD, &stats);
         }
 
         #pragma omp parallel for
@@ -112,6 +113,9 @@ int main(int argc, char *argv[])
 
             A_shadow[j] = (lo+hi) / 2.0;
         }
+
+        // A_shadow[0]=0.0;
+        // A_shadow[N+1]=N+1;
         
         // MPI_Irecv needs to be parallelized by waitall and separating it from the loop
         double* temp = A_shadow;
