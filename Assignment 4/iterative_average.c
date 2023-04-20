@@ -69,54 +69,103 @@ int main(int argc, char *argv[])
 
         if(rank > 0) {
             double x = A[START];
+            MPI_Request req;
             MPI_Status stats;
-            MPI_Send(&x, 1, MPI_DOUBLE, rank-1, i, MPI_COMM_WORLD);
-            MPI_Recv(&st, 1, MPI_DOUBLE, rank-1, i, MPI_COMM_WORLD, &stats);
+            MPI_Isend(&x, 1, MPI_DOUBLE, rank-1, i, MPI_COMM_WORLD, &req);
+            MPI_Wait(&req, &stats);
+            // MPI_Send(&x, 1, MPI_DOUBLE, rank-1, i, MPI_COMM_WORLD);
+            // MPI_Recv(&st, 1, MPI_DOUBLE, rank-1, i, MPI_COMM_WORLD, &stats);
         }
 
         if(rank < np-1) {
             double x = A[END];
+            MPI_Request req;
             MPI_Status stats;
-            MPI_Send(&x, 1, MPI_DOUBLE, rank+1, i, MPI_COMM_WORLD);
-            MPI_Recv(&en, 1, MPI_DOUBLE, rank+1, i, MPI_COMM_WORLD, &stats);
+            MPI_Isend(&x, 1, MPI_DOUBLE, rank+1, i, MPI_COMM_WORLD, &req);
+            MPI_Wait(&req, &stats);
+            // MPI_Send(&x, 1, MPI_DOUBLE, rank+1, i, MPI_COMM_WORLD);
+            // MPI_Recv(&en, 1, MPI_DOUBLE, rank+1, i, MPI_COMM_WORLD, &stats);
         }
+
+        
+        MPI_Request startReq, endReq;
+        MPI_Status startStatus, endStatus;
+        int startCompute = 1, endCompute = 1;
 
         // Add default(none)
         #pragma omp parallel for
-        for(long j=START; j<=END; ++j) {
+        for(long j=START; j<=END; ++j) 
+        {
+            int sc=1, ec=1;
             double lo = A[j-1], hi = A[j+1];
-            if((j == START) && (rank > 0)) {
-                // NON BLOCKING VERSION COMMENTED:
-
-                // MPI_Request req;
+            if((j == START) && (rank > 0)) 
+            {
+                startCompute = 0; sc = 0;
+                // NON BLOCKING VERSION:
                 MPI_Status stats;
-                // MPI_Irecv(&lo, 1, MPI_DOUBLE, rank-1, i, MPI_COMM_WORLD, &req);
-
-                // // Remove this wait for a WaitAll
-                // MPI_Wait(&req, &stats);
-                // MPI_Recv(&lo, 1, MPI_DOUBLE, rank-1, i, MPI_COMM_WORLD, &stats);
-                lo = st;
+                MPI_Irecv(&st, 1, MPI_DOUBLE, rank-1, i, MPI_COMM_WORLD, &startReq);
             }
 
-            if((j == END) && (rank < (np-1))) {
+            if((j == END) && (rank < (np-1))) 
+            {
+                endCompute = 0; ec = 0;
                 // NON-BLOCKING VERSION:
 
-                // MPI_Request req;
                 MPI_Status stats;
-                // MPI_Irecv(&hi, 1, MPI_DOUBLE, rank+1, i, MPI_COMM_WORLD, &req);
-
-                // // Remove this wait for a WaitAll
-                // MPI_Wait(&req, &stats);
-
-                // MPI_Recv(&hi, 1, MPI_DOUBLE, rank+1, i, MPI_COMM_WORLD, &stats);
-                hi = en;
+                MPI_Irecv(&en, 1, MPI_DOUBLE, rank+1, i, MPI_COMM_WORLD, &endReq);
             }
 
-            A_shadow[j] = (lo+hi) / 2.0;
+            // Case when we have both A[j-1] & A[j+1]:
+            if (sc == 1 && ec == 1)
+            {
+                A_shadow[j] = (lo + hi) / 2.0;
+            }
         }
 
-        // A_shadow[0]=0.0;
-        // A_shadow[N+1]=N+1;
+    
+        // Handling the case when the chunk's first elements computation remains due to communication:
+        if (startCompute == 0) 
+        {
+            MPI_Wait(&startReq, &startStatus);
+            if(START == END) 
+            {
+                // Case when A[j+1] is also not available due to NON-BLOCKING 
+                if(endCompute == 0) 
+                {
+                    MPI_Wait(&endReq, &endStatus);
+                    A_shadow[END] = (st + en) / 2.0;
+                    endCompute = 1;
+                }
+                else
+                {
+                    A_shadow[END] = (st + A[START+1]) / 2.0;
+                }
+                startCompute = 1;
+            }
+            else 
+            {
+                A_shadow[START] = (st + A[START+1]) / 2.0;
+                startCompute = 1;
+            }
+        }
+        
+        // Handling the case when the chunk's first elements computation remains due to communication:
+        if(endCompute == 0) 
+        {
+            // printf("EndCompute in iteration %ld in rank %d\n", i, rank);
+            MPI_Wait(&endReq, &endStatus);
+            A_shadow[END] = (A[END-1] + en) / 2.0;
+            endCompute = 1;
+        }
+
+
+        /*
+            WaitAll has not been used because in WaitAll, 
+            we have to specify array for req and status of size 2 
+            but we will not always require sized 2 
+            (in case of corner chunks)
+        */
+    
         
         // MPI_Irecv needs to be parallelized by waitall and separating it from the loop
         double* temp = A_shadow;
@@ -125,8 +174,11 @@ int main(int argc, char *argv[])
         // Using waitall before changing the arrays
         // Used for non-blocking receive
 
-        // for(long i1=0; i1<=N+1; ++i1) printf("%f ", A[i1]);
-        // printf("| %d | At end of iteration %ld\n", rank, i);
+    /*      //For PRINTING array A after each iteration
+    
+        for(long i1=0; i1<=N+1; ++i1) printf("%f ", A[i1]);
+        printf("| %d | At end of iteration %ld\n", rank, i);
+    */
     }
 
     // Use OpenMP here with reduction
@@ -139,6 +191,7 @@ int main(int argc, char *argv[])
     printf("Rank = %d | SUM = %f\n", rank, sum);
 
     double total_sum;   // Variable to get total sum
+
     // Using MPI Reduce here to get the sum from all processors:
     MPI_Reduce(&sum, &total_sum, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 
