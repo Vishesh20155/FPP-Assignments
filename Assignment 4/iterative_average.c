@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
     if(argc>1) {    N = atol(argv[1]);  }
     if(argc>2) {    NI = atol(argv[2]); }
 
-    printf("N = %ld, NI = %ld\n", N, NI);
+    // printf("N = %ld, NI = %ld\n", N, NI);
 
     // Declaring the array A using malloc
     A = (double*)malloc(sizeof(double) * (N + 2));
@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
         long START = getStart(np, rank);
         long END = START + BATCH_SIZE - 1;
 
-        printf("My rank = %d, | START = %ld | END = %ld\n", rank, START, END);
+        // printf("My rank = %d, | START = %ld | END = %ld\n", rank, START, END);
 
         double st = 0.0, en = 0.0;
 
@@ -81,6 +81,7 @@ int main(int argc, char *argv[])
             MPI_Recv(&en, 1, MPI_DOUBLE, rank+1, i, MPI_COMM_WORLD, &stats);
         }
 
+        // Add default(none)
         #pragma omp parallel for
         for(long j=START; j<=END; ++j) {
             double lo = A[j-1], hi = A[j+1];
@@ -124,18 +125,29 @@ int main(int argc, char *argv[])
         // Using waitall before changing the arrays
         // Used for non-blocking receive
 
-        for(long i1=0; i1<=N+1; ++i1) printf("%f ", A[i1]);
-        printf("| %d | At end of iteration %ld\n", rank, i);
+        // for(long i1=0; i1<=N+1; ++i1) printf("%f ", A[i1]);
+        // printf("| %d | At end of iteration %ld\n", rank, i);
     }
 
-    MPI_Finalize();
-
+    // Use OpenMP here with reduction
     double sum = 0.0;
+    #pragma omp parallel for reduction(+:sum)
     for(int i=1; i<=N; ++i) {
         sum+=A[i];
     }
 
     printf("Rank = %d | SUM = %f\n", rank, sum);
+
+    double total_sum;   // Variable to get total sum
+    // Using MPI Reduce here to get the sum from all processors:
+    MPI_Reduce(&sum, &total_sum, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+
+    MPI_Finalize();
+
+
+    if(rank == 0) {
+        printf("Total Sum: %f\n", total_sum);
+    }
 
     free(A);
     free(A_shadow);
