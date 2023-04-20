@@ -2,11 +2,20 @@
 #include <omp.h>
 #include <mpi.h>
 #include <stdlib.h>
+#include <sys/time.h>
 #include <string.h>
 
 long N = 25165824l, NI = 64;
 double *A, *A_shadow;
 
+// Function to find Batch Size for corresponding rank:
+/*
+    Eg:
+    N = 22, np = 4
+    will be broken as:
+        6 + 6 + 5 + 5
+    batch sizes
+*/
 long ceilDiv(int d, int rank)
 {
   long m = N / (long)d;
@@ -18,11 +27,13 @@ long ceilDiv(int d, int rank)
     return m;
 }
 
+// Min implementation for long parameters
 long min(long a, long b)
 {
   return a < b ? a : b;
 }
 
+// Function to compute the starting index for inner loop for current rank
 long getStart(int d, int rank)
 {
   long batch = N / ((long)d);
@@ -30,6 +41,12 @@ long getStart(int d, int rank)
   long extra = N % ((long)d);
   start += min((long)rank, extra);
   return start + 1;
+}
+
+long get_usecs () {
+  struct timeval t;
+  gettimeofday(&t,NULL);
+  return t.tv_sec*1000000+t.tv_usec;
 }
 
 
@@ -55,6 +72,9 @@ int main(int argc, char *argv[])
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &np);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    // Start timer here:
+    long start_timer = get_usecs();
     
     for(long i=0; i<NI; ++i) 
     {
@@ -175,7 +195,7 @@ int main(int argc, char *argv[])
         // Used for non-blocking receive
 
     /*      //For PRINTING array A after each iteration
-    
+
         for(long i1=0; i1<=N+1; ++i1) printf("%f ", A[i1]);
         printf("| %d | At end of iteration %ld\n", rank, i);
     */
@@ -188,18 +208,22 @@ int main(int argc, char *argv[])
         sum+=A[i];
     }
 
-    printf("Rank = %d | SUM = %f\n", rank, sum);
+    // printf("Rank = %d | SUM = %f\n", rank, sum);
 
     double total_sum;   // Variable to get total sum
 
     // Using MPI Reduce here to get the sum from all processors:
     MPI_Reduce(&sum, &total_sum, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 
+    long end_timer = get_usecs();
+    double dur = ((double)(end_timer-start_timer))/1000000;
+
     MPI_Finalize();
 
 
     if(rank == 0) {
         printf("Total Sum: %f\n", total_sum);
+        printf("Time = %.3f\n",dur);
     }
 
     free(A);
