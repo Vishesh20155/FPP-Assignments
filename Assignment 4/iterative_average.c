@@ -58,31 +58,36 @@ int main(int argc, char *argv[])
 
     // printf("N = %ld, NI = %ld\n", N, NI);
 
-    // Declaring the array A using malloc
-    A = (double*)malloc(sizeof(double) * (N + 2));
-    A_shadow = (double*)malloc(sizeof(double) * (N + 2));
-
-    // Initialize the array
-    memset(A, 0, sizeof(double) * (N + 2));
-    A[N+1] = N+1;
-    memset(A_shadow, 0, sizeof(double) * (N + 2));
-    A_shadow[N+1] = N+1;
-
     int rank, np;
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &np);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    long BATCH_SIZE = ceilDiv(np, rank);
+
+    long array_size = ( ((rank == 0) || (rank == np-1)) ? BATCH_SIZE + 1 : BATCH_SIZE );
+    // printf("Array Size %ld in rank %d\n", array_size, rank);
+
+    // Declaring the array A using malloc
+    A = (double*)malloc(sizeof(double) * array_size);
+    A_shadow = (double*)malloc(sizeof(double) * array_size);
+
+    // Initialize the array
+    memset(A, 0, sizeof(double) * array_size);
+    memset(A_shadow, 0, sizeof(double) * array_size);
+    if(rank == np-1)
+    {
+        A[array_size-1] = N+1;
+        A_shadow[array_size-1] = N+1;
+    }
+
+    long START = ( (rank == 0) ? 1 : 0 );
+    long END = ( (rank == np-1) ? array_size-2 : array_size-1);
 
     // Start timer here:
     long start_timer = get_usecs();
     
     for(long i=0; i<NI; ++i) 
     {
-
-        long BATCH_SIZE = ceilDiv(np, rank);
-        long START = getStart(np, rank);
-        long END = START + BATCH_SIZE - 1;
-
         // printf("My rank = %d, | START = %ld | END = %ld\n", rank, START, END);
 
         double st = 0.0, en = 0.0;
@@ -204,7 +209,7 @@ int main(int argc, char *argv[])
     // Use OpenMP here with reduction
     double sum = 0.0;
     #pragma omp parallel for reduction(+:sum)
-    for(int i=1; i<=N; ++i) {
+    for(long i=START; i<=END; ++i) {
         sum+=A[i];
     }
 
@@ -218,6 +223,9 @@ int main(int argc, char *argv[])
     long end_timer = get_usecs();
     double dur = ((double)(end_timer-start_timer))/1000000;
 
+    free(A);
+    free(A_shadow);
+
     MPI_Finalize();
 
 
@@ -226,7 +234,5 @@ int main(int argc, char *argv[])
         printf("Time = %.3f\n",dur);
     }
 
-    free(A);
-    free(A_shadow);
     return 0;
 }
