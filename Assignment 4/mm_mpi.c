@@ -100,14 +100,14 @@ int main(int argc, char *argv[])
         }
     }
 
-    start_time = get_usecs();
+    // start_time = get_usecs();
     // Get value of A & B using Broadcast
     for(int i=0; i<N; ++i)
     {
         MPI_Bcast(A[i], N, MPI_INT, 0, MPI_COMM_WORLD);
         MPI_Bcast(B[i], N, MPI_INT, 0, MPI_COMM_WORLD);
     }
-
+    start_time = get_usecs();
     
 
     // Computing MatMul in C
