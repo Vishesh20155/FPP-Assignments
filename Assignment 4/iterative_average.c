@@ -117,8 +117,7 @@ int main(int argc, char *argv[])
         MPI_Status startStatus, endStatus;
         int startCompute = 1, endCompute = 1;
 
-        // Add default(none)
-        #pragma omp parallel for
+        #pragma omp parallel for default(none) shared(A, A_shadow, startCompute, endCompute, startReq, endReq, st, en) firstprivate(START, END, np, rank, i)
         for(long j=START; j<=END; ++j) 
         {
             int sc=1, ec=1;
@@ -208,7 +207,7 @@ int main(int argc, char *argv[])
 
     // Use OpenMP here with reduction
     double sum = 0.0;
-    #pragma omp parallel for reduction(+:sum)
+    #pragma omp parallel for default(none) shared(A) firstprivate(START, END) reduction(+:sum)
     for(long i=START; i<=END; ++i) {
         sum+=A[i];
     }
