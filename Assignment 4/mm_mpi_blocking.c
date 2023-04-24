@@ -114,14 +114,6 @@ int main(int argc, char *argv[])
     for(int i=0; i<N; ++i)
         MPI_Bcast(B[i], N, MPI_INT, 0, MPI_COMM_WORLD);
 
-    // Computing Matmul in C in each rank:
-    // for(int i=0; i<numRows; ++i)
-    // {
-    //     for(int j=0; j<N; ++j)
-    //     {
-    //         C[i][j] = 0;
-    //     }
-    // }
 
     for(int i=0; i<batchSize; ++i)
     {
@@ -140,17 +132,17 @@ int main(int argc, char *argv[])
         }
     }
 
-    // if(rank != 0)
-    // {
-    //     for(int i=0; i<numRows; ++i)
-    //         MPI_Send(C[i], N, MPI_INT, 0, TAG3+i, MPI_COMM_WORLD);
-    //     // MPI_Request req;
-    //     // MPI_Isend(C[i], N, MPI_INT, 0, TAG3+i, MPI_COMM_WORLD, &req);
-    // }
+    if(rank != 0)
+    {
+        for(int i=0; i<batchSize; ++i)
+        {
+            MPI_Send(C[i], N, MPI_INT, 0, TAG3+i, MPI_COMM_WORLD);
+        }
+    }
 
     if (rank == 0) 
     {
-        // Master (root) Receiving the data in a Non-Blocking Call
+        // Master (root) Receiving C in a Blocking Call
         for(int rnk=1; rnk<np; ++rnk)
         {
             int rankStart = getStart(np, rnk);
@@ -169,17 +161,6 @@ int main(int argc, char *argv[])
         printf("Test Success. \n");
         printf("Time = %.3f\n", dur);
     }
-
-    // for (int i = 0; i < numRows; i++)
-    // {
-    //     for (int j = 0; j < N; j++)
-    //         printf("%d ", C[i][j]);
-    //     printf("| row %d | rank %d \n", i, rank);
-    // }
-    
-    // A[0][0] = 4;
-    // B[0][0] = 4;
-    // C[0][0] = 4;
 
     // Free Up the allocated memory space
     // for(int i=0; i<N; ++i) free(A[i]);

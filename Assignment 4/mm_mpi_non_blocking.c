@@ -148,7 +148,7 @@ int main(int argc, char *argv[])
     }
 
     // Computing MatMul in C
-    for(int i=0; i<numRows; ++i)
+    for(int i=0; i<batchSize; ++i)
     {
         // Ensuring A[i] has been received by using wait:
         if(rank > 0)

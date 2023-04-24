@@ -100,18 +100,18 @@ int main(int argc, char *argv[])
         }
     }
 
-    // start_time = get_usecs();
+    start_time = get_usecs();
     // Get value of A & B using Broadcast
     for(int i=0; i<N; ++i)
     {
         MPI_Bcast(A[i], N, MPI_INT, 0, MPI_COMM_WORLD);
         MPI_Bcast(B[i], N, MPI_INT, 0, MPI_COMM_WORLD);
     }
-    start_time = get_usecs();
+
     
 
     // Computing MatMul in C
-    for(int i=0; i<numRows; ++i)
+    for(int i=0; i<batchSize; ++i)
     {
         for(int j=0; j<N; ++j)
         {
@@ -122,22 +122,14 @@ int main(int argc, char *argv[])
             }
         }
 
-        // if(rank != 0)
-        // {
-        //     // Commented Code for BLOCKING send
-        //     MPI_Send(C[i], N, MPI_INT, 0, TAG3+i, MPI_COMM_WORLD);
-
-        //     // NON BLOCKING send of C
-        //     // MPI_Request req;
-        //     // MPI_Isend(C[i], N, MPI_INT, 0, TAG3+i, MPI_COMM_WORLD, &req);
-        // }
-    }
-
-    if(rank != 0)
-    {
-        for(int i=0; i<numRows; ++i)
+        if(rank != 0)
         {
-            MPI_Send(C[i], N, MPI_INT, 0, TAG3+i, MPI_COMM_WORLD);
+            // Commented Code for BLOCKING send
+            // MPI_Send(C[i], N, MPI_INT, 0, TAG3+i, MPI_COMM_WORLD);
+
+            // NON BLOCKING send of C
+            MPI_Request req;
+            MPI_Isend(C[i], N, MPI_INT, 0, TAG3+i, MPI_COMM_WORLD, &req);
         }
     }
 
@@ -150,17 +142,17 @@ int main(int argc, char *argv[])
             int rankBatch = getBatch(np, rnk);
 
             // Non Blocking Receive of C
-            // for(int i=0; i<rankBatch; ++i)
-            // {
-            //     MPI_Irecv(C[rankStart+i], N, MPI_INT, rnk, TAG3+i, MPI_COMM_WORLD, &reqsC[rankStart+i-batchSize]);
-            // }
-
-            MPI_Status stats[rankBatch];
             for(int i=0; i<rankBatch; ++i)
-                MPI_Recv(C[rankStart+i], N, MPI_INT, rnk, TAG3+i, MPI_COMM_WORLD, &stats[i]);
+            {
+                MPI_Irecv(C[rankStart+i], N, MPI_INT, rnk, TAG3+i, MPI_COMM_WORLD, &reqsC[rankStart+i-batchSize]);
+            }
+
+            // MPI_Status stats[rankBatch];
+            // for(int i=0; i<rankBatch; ++i)
+            //     MPI_Recv(C[rankStart+i], N, MPI_INT, rnk, TAG3+i, MPI_COMM_WORLD, &stats[i]);
         }
 
-        // MPI_Waitall(N-batchSize, reqsC, statsC);
+        MPI_Waitall(N-batchSize, reqsC, statsC);
         
         // Stopping the timer:
         end_time = get_usecs();
@@ -187,4 +179,3 @@ int main(int argc, char *argv[])
 
 	return 0;
 }
-
