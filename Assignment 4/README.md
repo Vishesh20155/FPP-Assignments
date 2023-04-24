@@ -9,7 +9,7 @@ make
 `
 
  `
- mpirun --oversubscribe -np 2 ./iterative_average 25165824 64
+ OMP_NUM_THREADS=2 mpirun --oversubscribe -np 2 ./iterative_average 25165824 64
  `
 
  ## Question 2:

@@ -87,6 +87,14 @@ int main(int argc, char *argv[])
     if(rank == 0)
         statsC = (MPI_Status*)malloc((N-batchSize) * sizeof(MPI_Status));
 
+    MPI_Request *reqsSendC;
+    if(rank != 0)
+        reqsSendC = (MPI_Request*)malloc(batchSize * sizeof(MPI_Request));
+
+    MPI_Status *statsSendC;
+    if(rank != 0)
+        statsSendC = (MPI_Status*)malloc(batchSize * sizeof(MPI_Status));
+
     long start_time, end_time;
 
     if(rank == 0)
@@ -128,8 +136,7 @@ int main(int argc, char *argv[])
             // MPI_Send(C[i], N, MPI_INT, 0, TAG3+i, MPI_COMM_WORLD);
 
             // NON BLOCKING send of C
-            MPI_Request req;
-            MPI_Isend(C[i], N, MPI_INT, 0, TAG3+i, MPI_COMM_WORLD, &req);
+            MPI_Isend(C[i], N, MPI_INT, 0, TAG3+i, MPI_COMM_WORLD, &reqsSendC[i]);
         }
     }
 
@@ -163,6 +170,10 @@ int main(int argc, char *argv[])
         printf("Test Success. %d\n", N);
         printf("Time = %.3f\n", dur);
     }
+    else 
+    {
+        MPI_Waitall(batchSize, reqsSendC, statsSendC);
+    }
 
     // Free Up the allocated memory space
     // for(int i=0; i<N; ++i) free(A[i]);
@@ -173,6 +184,11 @@ int main(int argc, char *argv[])
     {
         free(reqsC);
         free(statsC);
+    }
+    else
+    {
+        free(reqsSendC);
+        free(statsSendC);
     }
     MPI_Finalize();
 
