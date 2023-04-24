@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
             }
         }
 
-        start_time = get_usecs();
+        // start_time = get_usecs();
         for(int rnk=1; rnk<np; ++rnk)
         {
             int rankStart = getStart(np, rnk);
@@ -101,6 +101,7 @@ int main(int argc, char *argv[])
             for(int i=0; i<rankBatch; ++i)
                 MPI_Send(A[i+rankStart], N, MPI_INT, rnk, TAG1 + i, MPI_COMM_WORLD);
         }
+        start_time = get_usecs();
     }
     else 
     {
@@ -114,33 +115,19 @@ int main(int argc, char *argv[])
         MPI_Bcast(B[i], N, MPI_INT, 0, MPI_COMM_WORLD);
 
     // Computing Matmul in C in each rank:
-    for(int i=0; i<numRows; ++i)
+    // for(int i=0; i<numRows; ++i)
+    // {
+    //     for(int j=0; j<N; ++j)
+    //     {
+    //         C[i][j] = 0;
+    //     }
+    // }
+
+    for(int i=0; i<batchSize; ++i)
     {
         for(int j=0; j<N; ++j)
         {
             C[i][j] = 0;
-        }
-    }
-
-    // for(int i=0; i<N; ++i) 
-    // {
-    //     for(int j=0; j<N; ++j) 
-    //         printf("%d ", B[i][j]);
-    //     printf("| row %d | rank %d --> B\n", i, rank);
-    // }
-
-
-    // for (int i = 0; i < numRows; i++)
-    // {
-    //     for (int j = 0; j < N; j++)
-    //         printf("%d ", A[i][j]);
-    //     printf("| row %d | rank %d \n", i, rank);
-    // }
-
-    for(int i=0; i<numRows; ++i)
-    {
-        for(int j=0; j<N; ++j)
-        {
             for(int k=0; k<N; ++k)
             {
                 C[i][j] += (A[i][k] * B[k][j]);
@@ -150,10 +137,16 @@ int main(int argc, char *argv[])
         if(rank != 0)
         {
             MPI_Send(C[i], N, MPI_INT, 0, TAG3+i, MPI_COMM_WORLD);
-            // MPI_Request req;
-            // MPI_Isend(C[i], N, MPI_INT, 0, TAG3+i, MPI_COMM_WORLD, &req);
         }
     }
+
+    // if(rank != 0)
+    // {
+    //     for(int i=0; i<numRows; ++i)
+    //         MPI_Send(C[i], N, MPI_INT, 0, TAG3+i, MPI_COMM_WORLD);
+    //     // MPI_Request req;
+    //     // MPI_Isend(C[i], N, MPI_INT, 0, TAG3+i, MPI_COMM_WORLD, &req);
+    // }
 
     if (rank == 0) 
     {

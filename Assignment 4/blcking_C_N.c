@@ -60,8 +60,9 @@ int main(int argc, char *argv[])
 
     // printf("Start Index %d | Batch Size %d | Rank %d\n", startIndex, batchSize, rank);
 
-    int **A = (int **)malloc(N * sizeof(int *));
-    for(int i=0; i<N; ++i)
+    // Efficient declaration of A in each rank
+    int **A = (int **)malloc(numRows * sizeof(int *));
+    for(int i=0; i<numRows; ++i)
     {
         A[i] = (int *)malloc(N * sizeof(int));
     }
@@ -73,21 +74,14 @@ int main(int argc, char *argv[])
     }
 
     // Allocating C efficiently -- only required number of rows are allocated
-    int **C = (int **)malloc(numRows * sizeof(int *));
-    for(int i=0; i<numRows; ++i)
+    int **C = (int **)malloc(N * sizeof(int *));
+    for(int i=0; i<N; ++i)
     {
         C[i] = (int *)malloc(N * sizeof(int));
     }
 
-    MPI_Request *reqsC;
-    if(rank == 0)
-        reqsC = (MPI_Request*)malloc((N-batchSize) * sizeof(MPI_Request));
-
-    MPI_Status *statsC;
-    if(rank == 0)
-        statsC = (MPI_Status*)malloc((N-batchSize) * sizeof(MPI_Status));
-
     long start_time, end_time;
+
 
     if(rank == 0)
     {
@@ -98,48 +92,60 @@ int main(int argc, char *argv[])
                 B[i][j] = 1;
             }
         }
-    }
 
-    // start_time = get_usecs();
-    // Get value of A & B using Broadcast
-    for(int i=0; i<N; ++i)
+        // start_time = get_usecs();
+        for(int rnk=1; rnk<np; ++rnk)
+        {
+            int rankStart = getStart(np, rnk);
+            int rankBatch = getBatch(np, rnk);
+            for(int i=0; i<rankBatch; ++i)
+                MPI_Send(A[i+rankStart], N, MPI_INT, rnk, TAG1 + i, MPI_COMM_WORLD);
+        }
+        start_time = get_usecs();
+    }
+    else 
     {
-        MPI_Bcast(A[i], N, MPI_INT, 0, MPI_COMM_WORLD);
-        MPI_Bcast(B[i], N, MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Status stat[batchSize];
+        for(int i=0; i<batchSize; ++i)
+            MPI_Recv(A[i], N, MPI_INT, 0, TAG1 + i, MPI_COMM_WORLD, &stat[i]);
     }
-    start_time = get_usecs();
-    
 
-    // Computing MatMul in C
+    // Get value of B using Broadcasr
+    for(int i=0; i<N; ++i)
+        MPI_Bcast(B[i], N, MPI_INT, 0, MPI_COMM_WORLD);
+
+    // Computing Matmul in C in each rank:
+    // for(int i=0; i<numRows; ++i)
+    // {
+    //     for(int j=0; j<N; ++j)
+    //     {
+    //         C[i][j] = 0;
+    //     }
+    // }
+
     for(int i=0; i<numRows; ++i)
     {
         for(int j=0; j<N; ++j)
         {
-            C[i][j] = 0;
+            C[i+startIndex][j] = 0;
             for(int k=0; k<N; ++k)
             {
-                C[i][j] += (A[i][k] * B[k][j]);
+                C[i+startIndex][j] += (A[i][k] * B[k][j]);
             }
         }
-
-        // if(rank != 0)
-        // {
-        //     // Commented Code for BLOCKING send
-        //     MPI_Send(C[i], N, MPI_INT, 0, TAG3+i, MPI_COMM_WORLD);
-
-        //     // NON BLOCKING send of C
-        //     // MPI_Request req;
-        //     // MPI_Isend(C[i], N, MPI_INT, 0, TAG3+i, MPI_COMM_WORLD, &req);
-        // }
-    }
-
-    if(rank != 0)
-    {
-        for(int i=0; i<numRows; ++i)
+        if(rank != 0)
         {
-            MPI_Send(C[i], N, MPI_INT, 0, TAG3+i, MPI_COMM_WORLD);
+            MPI_Send(C[i+startIndex], N, MPI_INT, 0, TAG3+i, MPI_COMM_WORLD);
         }
     }
+
+    // if(rank != 0)
+    // {
+    //     for(int i=0; i<numRows; ++i)
+    //         MPI_Send(C[i+startIndex], N, MPI_INT, 0, TAG3+i, MPI_COMM_WORLD);
+    //     // MPI_Request req;
+    //     // MPI_Isend(C[i], N, MPI_INT, 0, TAG3+i, MPI_COMM_WORLD, &req);
+    // }
 
     if (rank == 0) 
     {
@@ -148,19 +154,10 @@ int main(int argc, char *argv[])
         {
             int rankStart = getStart(np, rnk);
             int rankBatch = getBatch(np, rnk);
-
-            // Non Blocking Receive of C
-            // for(int i=0; i<rankBatch; ++i)
-            // {
-            //     MPI_Irecv(C[rankStart+i], N, MPI_INT, rnk, TAG3+i, MPI_COMM_WORLD, &reqsC[rankStart+i-batchSize]);
-            // }
-
             MPI_Status stats[rankBatch];
             for(int i=0; i<rankBatch; ++i)
                 MPI_Recv(C[rankStart+i], N, MPI_INT, rnk, TAG3+i, MPI_COMM_WORLD, &stats[i]);
         }
-
-        // MPI_Waitall(N-batchSize, reqsC, statsC);
         
         // Stopping the timer:
         end_time = get_usecs();
@@ -168,20 +165,26 @@ int main(int argc, char *argv[])
 
         // Validating the output
         for(int i=0; i<N; i++) for(int j=0; j<N; j++) assert(C[i][j] == N);
-        printf("Test Success. %d\n", N);
+        printf("Test Success. \n");
         printf("Time = %.3f\n", dur);
     }
+
+    // for (int i = 0; i < numRows; i++)
+    // {
+    //     for (int j = 0; j < N; j++)
+    //         printf("%d ", C[i][j]);
+    //     printf("| row %d | rank %d \n", i, rank);
+    // }
+    
+    // A[0][0] = 4;
+    // B[0][0] = 4;
+    // C[0][0] = 4;
 
     // Free Up the allocated memory space
     // for(int i=0; i<N; ++i) free(A[i]);
 	free(A);
     free(B);
     free(C);
-    if(rank == 0)
-    {
-        free(reqsC);
-        free(statsC);
-    }
     MPI_Finalize();
 
 
