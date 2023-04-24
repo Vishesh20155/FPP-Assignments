@@ -125,11 +125,6 @@ int main(int argc, char *argv[])
                 C[i][j] += (A[i][k] * B[k][j]);
             }
         }
-
-        if(rank != 0)
-        {
-            MPI_Send(C[i], N, MPI_INT, 0, TAG3+i, MPI_COMM_WORLD);
-        }
     }
 
     if(rank != 0)
