@@ -88,6 +88,14 @@ int main(int argc, char *argv[])
     if(rank > 0)
         statsA = (MPI_Status*)malloc(numRows * sizeof(MPI_Status));
 
+    MPI_Request *reqsSendA;
+    if(rank == 0)
+        reqsSendA = (MPI_Request*)malloc((N-batchSize) * sizeof(MPI_Request));
+
+    MPI_Status *statsSendA;
+    if(rank == 0)
+        statsSendA = (MPI_Status*)malloc((N-batchSize) * sizeof(MPI_Status));
+
     MPI_Request *reqsC;
     if(rank == 0)
         reqsC = (MPI_Request*)malloc((N-batchSize) * sizeof(MPI_Request));
@@ -95,6 +103,14 @@ int main(int argc, char *argv[])
     MPI_Status *statsC;
     if(rank == 0)
         statsC = (MPI_Status*)malloc((N-batchSize) * sizeof(MPI_Status));
+
+    MPI_Request *reqsSendC;
+    if(rank != 0)
+        reqsSendC = (MPI_Request*)malloc(batchSize * sizeof(MPI_Request));
+
+    MPI_Status *statsSendC;
+    if(rank != 0)
+        statsSendC = (MPI_Status*)malloc(batchSize * sizeof(MPI_Status));
 
     long start_time, end_time;
 
@@ -121,7 +137,7 @@ int main(int argc, char *argv[])
             MPI_Request reqs[rankBatch];
             for(int i=0; i<rankBatch; ++i) 
             {
-                MPI_Isend(A[i+rankStart], N, MPI_INT, rnk, TAG1+i, MPI_COMM_WORLD, &reqs[i]);
+                MPI_Isend(A[i+rankStart], N, MPI_INT, rnk, TAG1+i, MPI_COMM_WORLD, &reqsSendA[i+rankStart-batchSize]);
             }
         }
     }
@@ -147,6 +163,11 @@ int main(int argc, char *argv[])
         }
     }
 
+    if(rank == 0)
+    {
+        MPI_Waitall(N-batchSize, reqsSendA, statsSendA);
+    }
+
     // Computing MatMul in C
     for(int i=0; i<batchSize; ++i)
     {
@@ -169,7 +190,7 @@ int main(int argc, char *argv[])
 
             // NON BLOCKING send of C
             MPI_Request req;
-            MPI_Isend(C[i], N, MPI_INT, 0, TAG3+i, MPI_COMM_WORLD, &req);
+            MPI_Isend(C[i], N, MPI_INT, 0, TAG3+i, MPI_COMM_WORLD, &reqsSendC[i]);
         }
     }
 
@@ -203,17 +224,10 @@ int main(int argc, char *argv[])
         printf("Test Success. \n");
         printf("Time = %.3f\n", dur);
     }
-
-    // for (int i = 0; i < numRows; i++)
-    // {
-    //     for (int j = 0; j < N; j++)
-    //         printf("%d ", C[i][j]);
-    //     printf("| row %d | rank %d \n", i, rank);
-    // }
-    
-    // A[0][0] = 4;
-    // B[0][0] = 4;
-    // C[0][0] = 4;
+    else
+    {
+        MPI_Waitall(batchSize, reqsSendC, statsSendC);
+    }
 
     // Free Up the allocated memory space
     // for(int i=0; i<N; ++i) free(A[i]);
@@ -224,11 +238,15 @@ int main(int argc, char *argv[])
     {
         free(reqsA);
         free(statsA);
+        free(reqsSendC);
+        free(statsSendC);
     }
     else 
     {
         free(reqsC);
         free(statsC);
+        free(reqsSendA);
+        free(statsSendA);
     }
     MPI_Finalize();
 
