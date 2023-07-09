@@ -35,5 +35,6 @@ make
 
 Speedup results:
 
-blob:https://web.whatsapp.com/d8106059-ca28-43cd-8171-8e6f8c9e7bc0![image](https://github.com/Vishesh20155/FPP-Assignments/assets/88935135/b09ed795-5284-462e-8ef5-30986734d3da)
+![image](https://github.com/Vishesh20155/FPP-Assignments/assets/88935135/8ef8e591-2cbb-45c7-af32-e82ad7923007)
+
 
